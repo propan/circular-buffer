@@ -74,10 +74,44 @@
   (pop [this]
     (.cons this nil))
   
+  clojure.lang.IPersistentVector
+  (assocN [this i val]
+    (let [new-items (assoc items (rem (+ start i) size) val)]
+      (CircularBuffer. new-items size (rem (inc start) size) -1 (meta this))))
+  
+  clojure.lang.Associative
+  (assoc [this k v]
+    (if (clojure.lang.Util/isInteger k)
+      (.assocN this k v)
+      (throw (IllegalArgumentException. "Key must be integer"))))
+  (containsKey [this k]
+    (and (clojure.lang.Util/isInteger k)
+         (<= 0 (int k))
+         (< (int k) size)))
+  (entryAt [this k]
+    (when (.containsKey this k)
+      (clojure.lang.MapEntry. k (.nth this (int k)))))
+  
+  clojure.lang.ILookup
+  (valAt [this k not-found]
+    (if (clojure.lang.Util/isInteger k)
+        (.nth this (int k))
+        not-found))
+  (valAt [this k] (.valAt this k nil))
+  
+  clojure.lang.IFn
+  (invoke [this k]
+    (if (clojure.lang.Util/isInteger k)
+      (let [i (int k)]
+        (if (and (>= i 0) (< i size))
+          (.nth this i)
+          (throw (IndexOutOfBoundsException.))))
+      (throw (IllegalArgumentException. "Key must be integer"))))
+  
   clojure.lang.Seqable
   (seq [_]
     (for [i (range size)]
-      (nth items (rem (+ start i) size))))
+      (.nth items i)))
   
   )
 
