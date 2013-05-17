@@ -1,9 +1,18 @@
 (ns circular-buffer.core)
 
-(deftype CircularBuffer [^clojure.lang.PersistentVector items
+(defn- empty-vector
+  [size]
+  (vec (repeat size nil)))
+
+(defn- empty-vector-of
+  [t size]
+  (into (vector-of t) (repeat size 0)))
+
+(deftype CircularBuffer [^clojure.lang.IPersistentVector items
                          ^int size
                          ^int start
                          ^:unsynchronized-mutable ^int hashcode
+                         ^clojure.lang.IFn empty-fn
                          _meta]
   
   Object
@@ -36,7 +45,7 @@
   (meta [_] _meta)
 
   clojure.lang.IObj
-  (withMeta [_ m] (CircularBuffer. items size start hashcode m))
+  (withMeta [_ m] (CircularBuffer. items size start hashcode empty-fn m))
   
   clojure.lang.Indexed
   (nth [_ i]
@@ -51,9 +60,9 @@
   clojure.lang.IPersistentCollection
   (cons [this val]
     (let [new-items (assoc items start val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 (meta this))))
+      (CircularBuffer. new-items size (rem (inc start) size) -1 empty-fn (meta this))))
   (empty [this]
-    (CircularBuffer. (vec (repeat size nil)) size 0 -1 (meta this))) ; TODO: use the same vector type as in the original CB  
+    (CircularBuffer. (empty-fn size) size 0 -1 empty-fn (meta this)))  
   (equiv [this o]
     (cond
       (or (instance? clojure.lang.IPersistentVector o) (instance? java.util.RandomAccess o))
@@ -77,7 +86,7 @@
   clojure.lang.IPersistentVector
   (assocN [this i val]
     (let [new-items (assoc items (rem (+ start i) size) val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 (meta this))))
+      (CircularBuffer. new-items size (rem (inc start) size) -1 empty-fn (meta this))))
   
   clojure.lang.Associative
   (assoc [this k v]
@@ -109,11 +118,12 @@
       (throw (IllegalArgumentException. "Key must be integer"))))
   
   clojure.lang.Seqable
-  (seq [_]
+  (seq [this]
     (for [i (range size)]
-      (.nth items i)))
-  
-  )
+      (.nth this i)))
+
+  clojure.lang.Sequential
+)
 
 (defmethod print-method CircularBuffer [v w]
   ((get (methods print-method) clojure.lang.IPersistentVector) (seq v) w))
@@ -121,4 +131,11 @@
 (defn circular-buffer
   "Creates an empty circular buffer of the given size."
   [size]
-  (CircularBuffer. (vec (repeat size nil)) size 0 -1 nil))
+  (CircularBuffer. (empty-vector size) size 0 -1 empty-vector nil))
+
+(defn circular-buffer-of
+  "Creates an empty circular buffer backed by a new vector of a
+  single primitive type t, where t is one of :int :long :float
+  :double :byte :short :char or :boolean."
+  [t size]
+  (CircularBuffer. (empty-vector-of t size) size 0 -1 (partial empty-vector-of t) nil))
