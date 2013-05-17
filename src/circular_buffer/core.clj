@@ -53,9 +53,26 @@
     (let [new-items (assoc items start val)]
       (CircularBuffer. new-items size (rem (inc start) size) -1 (meta this))))
   (empty [this]
-    (CircularBuffer. (vec (repeat size nil)) size 0 -1 (meta this))) ; todo
+    (CircularBuffer. (vec (repeat size nil)) size 0 -1 (meta this))) ; TODO: use the same vector type as in the original CB  
   (equiv [this o]
-    false)
+    (cond
+      (or (instance? clojure.lang.IPersistentVector o) (instance? java.util.RandomAccess o))
+        (and (= size (count o))
+             (loop [i (int 0)]
+               (cond
+	               (= i size) true
+	               (= (.nth this i) (nth o i)) (recur (inc i))
+	               :else false)))
+      (or (instance? clojure.lang.Sequential o) (instance? java.util.List o))
+        (clojure.lang.Util/equiv (seq this) (seq o))
+      :else false))
+  
+  clojure.lang.IPersistentStack
+  (peek [this]
+    (when (> size (int 0))
+      (.nth this (dec size))))
+  (pop [this]
+    (.cons this nil))
   
   clojure.lang.Seqable
   (seq [_]
