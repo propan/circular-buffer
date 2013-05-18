@@ -123,6 +123,34 @@
       (.nth this i)))
 
   clojure.lang.Sequential
+  
+  java.lang.Iterable
+  (iterator [this]
+    (let [i (java.util.concurrent.atomic.AtomicInteger. 0)]
+      (reify java.util.Iterator
+        (hasNext [_] (< (.get i) size))
+        (next [_] (.nth this (dec (.incrementAndGet i))))
+        (remove [_] (throw (UnsupportedOperationException.))))))
+  
+  java.util.Collection
+  (contains [_ o] (boolean (some #(= % o) items)))
+  (containsAll [_ c] (every? #(.contains items %) c))
+  (isEmpty [_] (zero? size))
+  (toArray [this] (into-array Object (.seq this)))
+  (toArray [this arr]
+    (if (>= (count arr) size)
+      (do
+        (dotimes [i size]
+          (aset arr i (.nth this i)))
+        arr)
+      (into-array Object this)))
+  (size [_] size)
+  (add [_ o] (throw (UnsupportedOperationException.)))
+  (addAll [_ c] (throw (UnsupportedOperationException.)))
+  (clear [_] (throw (UnsupportedOperationException.)))
+  (^boolean remove [_ o] (throw (UnsupportedOperationException.)))
+  (removeAll [_ c] (throw (UnsupportedOperationException.)))
+  (retainAll [_ c] (throw (UnsupportedOperationException.)))
 )
 
 (defmethod print-method CircularBuffer [v w]
