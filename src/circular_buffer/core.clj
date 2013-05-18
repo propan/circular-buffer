@@ -6,7 +6,7 @@
 
 (defn- empty-vector-of
   [t size]
-  (into (vector-of t) (repeat size 0)))
+  (into (vector-of t) (repeat size (if (= :boolean t) false 0))))
 
 (deftype CircularBuffer [^clojure.lang.IPersistentVector items
                          ^int size
