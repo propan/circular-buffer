@@ -1,19 +1,29 @@
 (ns circular-buffer.core)
 
-(defn- empty-vector
-  [size]
-  (vec (repeat size nil)))
+(defn- default-value
+  [t]
+  (case t
+	  :any nil
+	  :boolean false
+	  0))
 
-(defn- empty-vector-of
-  [t size]
-  (into (vector-of t) (repeat size (if (= :boolean t) false 0))))
+(defn- empty-vector
+  [t size default]
+	 (if (= t :any)
+	     (vec (repeat size default))
+	     (into (vector-of t) (repeat size default))))
+
+(defn- previous-start
+  [start size]
+  (let [previous (dec start)]
+    (if (neg? previous)
+         (dec size)
+         previous)))
 
 (deftype CircularBuffer [^clojure.lang.IPersistentVector items
-                         ^int size
-                         ^int start
+                         ^int size ^int start
                          ^:unsynchronized-mutable ^int hashcode
-                         ^clojure.lang.IFn empty-fn
-                         _meta]
+                          type default _meta]
   
   Object
   (equals [this o]
@@ -45,7 +55,7 @@
   (meta [_] _meta)
 
   clojure.lang.IObj
-  (withMeta [_ m] (CircularBuffer. items size start hashcode empty-fn m))
+  (withMeta [_ m] (CircularBuffer. items size start hashcode type default m))
   
   clojure.lang.Indexed
   (nth [_ i]
@@ -60,9 +70,9 @@
   clojure.lang.IPersistentCollection
   (cons [this val]
     (let [new-items (assoc items start val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 empty-fn (meta this))))
+      (CircularBuffer. new-items size (rem (inc start) size) -1 type default (meta this))))
   (empty [this]
-    (CircularBuffer. (empty-fn size) size 0 -1 empty-fn (meta this)))  
+    (CircularBuffer. (empty-vector type size default) size 0 -1 type default (meta this)))  
   (equiv [this o]
     (cond
       (or (instance? clojure.lang.IPersistentVector o) (instance? java.util.RandomAccess o))
@@ -81,12 +91,14 @@
     (when (> size (int 0))
       (.nth this (dec size))))
   (pop [this]
-    (.cons this nil))
+    (let [prv-start (previous-start start size)
+          new-items (assoc items prv-start default)]
+      (CircularBuffer. new-items size prv-start -1 type default (meta this))))
   
   clojure.lang.IPersistentVector
   (assocN [this i val]
     (let [new-items (assoc items (rem (+ start i) size) val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 empty-fn (meta this))))
+      (CircularBuffer. new-items size (rem (inc start) size) -1 type default (meta this))))
   
   clojure.lang.Associative
   (assoc [this k v]
@@ -158,12 +170,16 @@
 
 (defn circular-buffer
   "Creates an empty circular buffer of the given size."
-  [size]
-  (CircularBuffer. (empty-vector size) size 0 -1 empty-vector nil))
+  ([size]
+   (circular-buffer size nil))
+  ([size default]
+   (CircularBuffer. (empty-vector :any size default) size 0 -1 :any default nil)))
 
 (defn circular-buffer-of
   "Creates an empty circular buffer backed by a new vector of a
   single primitive type t, where t is one of :int :long :float
   :double :byte :short :char or :boolean."
-  [t size]
-  (CircularBuffer. (empty-vector-of t size) size 0 -1 (partial empty-vector-of t) nil))
+  ([t size]
+   (circular-buffer-of t size (default-value t)))
+  ([t size default]
+   (CircularBuffer. (empty-vector t size default) size 0 -1 t default nil)))
