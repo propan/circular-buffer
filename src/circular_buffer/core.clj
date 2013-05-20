@@ -31,9 +31,7 @@
   (if (= :left direction)
     (rem (+ start size -1) size)
     (circular-next start :left)))
-;
-; TODO: include direction to hash and equals
-;
+
 (deftype CircularBuffer [^clojure.lang.IPersistentVector items
                          ^int size ^int start
                          ^:unsynchronized-mutable ^int hashcode
