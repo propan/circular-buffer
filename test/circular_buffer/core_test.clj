@@ -3,26 +3,30 @@
         circular-buffer.core))
 
 (deftest test-circular-buffer-creation
-  (testing "Creation using circular-buffer function"
-           (let [size 5
-                 cb (circular-buffer size)] 
-             (is (and (== size (count cb))
-                      (instance? clojure.lang.IPersistentVector (.items cb))))))
-  (testing "Creation using circular-buffer-of function"
+  (testing "The direction defines correct order of items"
+     (are [a b] (= a b)
+          (into (cbuf 4 :direction :left)  [1 2])  [nil nil 1 2]
+          (into (cbuf 4 :direction :right) [1 2]) [2 1 nil nil]
+          (into (cbuf 4 :direction :left)  [1 2 3 4 5])  [2 3 4 5]
+          (into (cbuf 4 :direction :right) [1 2 3 4 5])  [5 4 3 2]))
+  (testing "A buffer of specific type is backed with a right data structure"
+    (let [size 5 cb (cbuf size)] 
+     (is (and (== size (count cb))
+              (instance? clojure.lang.IPersistentVector (.items cb)))))
     (are [x size] (and (== size (count x)) (instance? clojure.core.Vec (.items x)))
-         (circular-buffer-of :boolean 1) 1
-         (circular-buffer-of :byte 2) 2
-         (circular-buffer-of :short 3) 3
-         (circular-buffer-of :int 4) 4
-         (circular-buffer-of :long 5) 5
-         (circular-buffer-of :float 6) 6
-         (circular-buffer-of :double 7) 7
-         (circular-buffer-of :char 8) 8))
+         (cbuf 1 :type :boolean) 1
+         (cbuf 2 :type :byte) 2
+         (cbuf 3 :type :short) 3
+         (cbuf 4 :type :int) 4
+         (cbuf 5 :type :long) 5
+         (cbuf 6 :type :float) 6
+         (cbuf 7 :type :double) 7
+         (cbuf 8 :type :char) 8))
   )
 
 (deftest test-counted-interface
   (testing "Always returns correct size"
-    (let [cb-0 (circular-buffer 3)
+    (let [cb-0 (cbuf 3)
           cb-1 (into cb-0 [1 2 3 4 5 6 7])
           cb-2 (conj cb-0 8)]
       (are [x] (= 3 (count x))
@@ -31,7 +35,7 @@
            cb-2))))
 
 (deftest test-indexed-interface
-  (let [cb (into (circular-buffer 3) [1 2 3 4 5 6 7])]
+  (let [cb (into (cbuf 3) [1 2 3 4 5 6 7])]
 	  (testing "nth always returns a value"
        (are [pos val] (= val (nth cb pos))
              0 5
@@ -49,10 +53,10 @@
 	          4 :not-found))))
 
 (deftest test-persistent-collection-interface
-  (let [cb-0 (into (circular-buffer 3) [1 2 3 4 5])
-        cb-1 (into (circular-buffer 3) [1 2 3 4 6])
-        cb-2 (into (circular-buffer 4) [1 2 3 4 5])
-        cb-3 (into (circular-buffer-of :boolean 2) [true false true])]
+  (let [cb-0 (into (cbuf 3) [1 2 3 4 5])
+        cb-1 (into (cbuf 3) [1 2 3 4 6])
+        cb-2 (into (cbuf 4) [1 2 3 4 5])
+        cb-3 (into (cbuf 2 :type :boolean) [true false true])]
 	  (testing "="
 	       (are [x] (= x cb-0)
 	            cb-0
@@ -81,9 +85,9 @@
              cb-1 cb-3))))
 
 (deftest test-persistent-stack-interface
-  (let [cb-obj (into (circular-buffer 2) [1 2 3 4])
-        cb-int  (into (circular-buffer-of :int 3) [1 2 3])
-        cb-bool (into (circular-buffer-of :boolean 4 true) [true false true])]
+  (let [cb-obj (into (cbuf 2) [1 2 3 4])
+        cb-int  (into (cbuf 3 :type :int) [1 2 3])
+        cb-bool (into (cbuf 4 :type :boolean :default true) [true false true])]
     (testing "peek"
        (is (= 4 (peek cb-obj))))
     (testing "pop"

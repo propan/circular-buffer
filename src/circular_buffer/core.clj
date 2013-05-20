@@ -13,17 +13,31 @@
 	     (vec (repeat size default))
 	     (into (vector-of t) (repeat size default))))
 
-(defn- previous-start
-  [start size]
-  (let [previous (dec start)]
-    (if (neg? previous)
-         (dec size)
-         previous)))
+(defn- ^long circular-nth
+  [^long i ^long start ^long size direction]
+  (let [offset (if (= :left direction) 0 1)]
+	  (rem (+ start i offset) size)))
 
+(declare circular-previous)
+
+(defn- ^long circular-next
+  [^long start ^long size direction]
+  (if (= :left direction)
+    (rem (inc start) size)
+    (circular-previous start size :left)))
+
+(defn- ^long circular-previous
+  [^long start ^long size direction]
+  (if (= :left direction)
+    (rem (+ start size -1) size)
+    (circular-next start :left)))
+;
+; TODO: include direction to hash and equals
+;
 (deftype CircularBuffer [^clojure.lang.IPersistentVector items
                          ^int size ^int start
                          ^:unsynchronized-mutable ^int hashcode
-                          type default _meta]
+                          type default direction _meta]
   
   Object
   (equals [this o]
@@ -31,15 +45,18 @@
       (identical? this o) true
       (instance? CircularBuffer o)
       (and
-        (= size (.size ^CircularBuffer o))
-        (= start (.start ^CircularBuffer o))
-        (= items (.items ^CircularBuffer o)))
+        (= size      (.size ^CircularBuffer o))
+        (= start     (.start ^CircularBuffer o))
+        (= direction (.direction ^CircularBuffer o))
+        (= items     (.items ^CircularBuffer o)))
       :else false))
   (hashCode [_]
     (when (== -1 hashcode)
       (set! hashcode (->> (int 17)
 										      (unchecked-multiply-int 31)
 										      (unchecked-add-int start)
+                          (unchecked-multiply-int 31)
+										      (unchecked-add-int (clojure.lang.Util/hash direction))
 										      (unchecked-multiply-int 31)
 										      (unchecked-add-int (clojure.lang.Util/hash items)))))
     hashcode)
@@ -55,11 +72,11 @@
   (meta [_] _meta)
 
   clojure.lang.IObj
-  (withMeta [_ m] (CircularBuffer. items size start hashcode type default m))
+  (withMeta [_ m] (CircularBuffer. items size start hashcode type default direction m))
   
   clojure.lang.Indexed
   (nth [_ i]
-    (let [pos (rem (+ start i) size)]
+    (let [pos (circular-nth i start size direction)]
       (nth items pos)))
   (nth [this i not-found]
      (let [z (int 0)]
@@ -70,9 +87,9 @@
   clojure.lang.IPersistentCollection
   (cons [this val]
     (let [new-items (assoc items start val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 type default (meta this))))
+      (CircularBuffer. new-items size (circular-next start size direction) -1 type default direction (meta this))))
   (empty [this]
-    (CircularBuffer. (empty-vector type size default) size 0 -1 type default (meta this)))  
+    (CircularBuffer. (empty-vector type size default) size 0 -1 type default direction (meta this)))  
   (equiv [this o]
     (cond
       (or (instance? clojure.lang.IPersistentVector o) (instance? java.util.RandomAccess o))
@@ -91,14 +108,14 @@
     (when (> size (int 0))
       (.nth this (dec size))))
   (pop [this]
-    (let [prv-start (previous-start start size)
+    (let [prv-start (circular-previous start size direction)
           new-items (assoc items prv-start default)]
-      (CircularBuffer. new-items size prv-start -1 type default (meta this))))
+      (CircularBuffer. new-items size prv-start -1 type default direction (meta this))))
   
   clojure.lang.IPersistentVector
   (assocN [this i val]
-    (let [new-items (assoc items (rem (+ start i) size) val)]
-      (CircularBuffer. new-items size (rem (inc start) size) -1 type default (meta this))))
+    (let [new-items (assoc items (circular-nth i start size direction) val)]
+      (CircularBuffer. new-items size start -1 type default direction (meta this))))
   
   clojure.lang.Associative
   (assoc [this k v]
@@ -146,7 +163,7 @@
   
   java.util.Collection
   (contains [_ o] (boolean (some #(= % o) items)))
-  (containsAll [_ c] (every? #(.contains items %) c))
+  (containsAll [this c] (every? #(.contains this %) c))
   (isEmpty [_] (zero? size))
   (toArray [this] (into-array Object (.seq this)))
   (toArray [this arr]
@@ -168,18 +185,14 @@
 (defmethod print-method CircularBuffer [v w]
   ((get (methods print-method) clojure.lang.IPersistentVector) (seq v) w))
 
-(defn circular-buffer
-  "Creates an empty circular buffer of the given size."
-  ([size]
-   (circular-buffer size nil))
-  ([size default]
-   (CircularBuffer. (empty-vector :any size default) size 0 -1 :any default nil)))
-
-(defn circular-buffer-of
+(defn cbuf
   "Creates an empty circular buffer backed by a new vector of a
-  single primitive type t, where t is one of :int :long :float
+  single type t, where t is one of :any :int :long :float
   :double :byte :short :char or :boolean."
-  ([t size]
-   (circular-buffer-of t size (default-value t)))
-  ([t size default]
-   (CircularBuffer. (empty-vector t size default) size 0 -1 t default nil)))
+  [size & {:keys [type direction default]
+           :or {type :any direction :left default :type-default}}]
+  (let [def-val  (if (= default :type-default)
+                     (default-value type)
+                      default)
+        init-vec (empty-vector type size def-val)]
+    (CircularBuffer. init-vec size 0 -1 type def-val direction nil)))
