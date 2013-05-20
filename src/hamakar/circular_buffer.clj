@@ -1,4 +1,4 @@
-(ns circular-buffer.core)
+(ns hamakar.circular-buffer)
 
 (defn- default-value
   [t]

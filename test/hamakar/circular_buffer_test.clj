@@ -1,6 +1,6 @@
-(ns circular-buffer.core-test
+(ns hamakar.circular-buffer-test
   (:use clojure.test
-        circular-buffer.core))
+        hamakar.circular-buffer))
 
 (deftest test-circular-buffer-creation
   (testing "The direction defines correct order of items"
