@@ -30,7 +30,7 @@
   [^long start ^long size direction]
   (if (= :left direction)
     (rem (+ start size -1) size)
-    (circular-next start :left)))
+    (circular-next start size :left)))
 
 (deftype CircularBuffer [^clojure.lang.IPersistentVector items
                          ^int size ^int start
@@ -104,7 +104,9 @@
   clojure.lang.IPersistentStack
   (peek [this]
     (when (> size (int 0))
-      (.nth this (dec size))))
+      (.nth this (if (= :right direction)
+                     0
+                     (dec size)))))
   (pop [this]
     (let [prv-start (circular-previous start size direction)
           new-items (assoc items prv-start default)]
