@@ -1,6 +1,6 @@
 # circular-buffer
 
-A circular buffer implementation backed by a persistent vector. Implements most of Clojure collections interfaces (and therefore supports
+An implementation of persistent circular buffer. Implements most of Clojure collections interfaces (and therefore supports
 methods like conj, into, nth, etc) as well as Java collections interfaces.
 
 The implementation provides the following options:
