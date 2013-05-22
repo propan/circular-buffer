@@ -5,23 +5,23 @@ methods like conj, into, nth, etc) as well as Java collections interfaces.
 
 The implementation provides the following options:
 
- ------------  ---------------------------------------------------------  ---------------------
-    Option                           Description                                Default       
- ------------  ---------------------------------------------------------  ---------------------
-  :type         defines the type of values, that will be stored in the     :any
-                buffer and therefore the type of the structure that backs
-                the buffer (either clojure.core.Vec or
-                clojure.lang.PersistentVector).
-                Possible values are :any :int :long :float :double :byte
-                :short :char or :boolean.  
-
-  :default      defines the default value in the buffer. If omitted         nil, 0, 0.0 or false
-                depends on the type of values for which the buffer is
-                configured. 
-
-  :direction    defines the direction in which new elements are added      :left
-                into the buffer                
- ------------  ---------------------------------------------------------  ---------------------
+| ------------ | ----------------------------------------------------------- | --------------------- |
+|   Option     |                       Description                           |        Default        |
+| ------------ | ----------------------------------------------------------- | --------------------- |
+| :type        |  defines the type of values, that will be stored in the     |  :any                 |
+|              |  buffer and therefore the type of the structure that backs  |                       |
+|              |  the buffer (either clojure.core.Vec or                     |                       |
+|              |  clojure.lang.PersistentVector).                            |                       |
+|              |  Possible values are :any :int :long :float :double :byte   |                       |
+|              |  :short :char or :boolean.                                  |                       |
+| ------------ | ----------------------------------------------------------- | --------------------- |
+| :default     |  defines the default value in the buffer. If omitted        |  nil, 0, 0.0 or false |
+|              |  depends on the type of values for which the buffer is      |                       |
+|              |  configured.                                                |                       |
+| ------------ | ----------------------------------------------------------- | --------------------- |
+| :direction   |  defines the direction in which new elements are added      |  :left                |
+|              |  into the buffer.                                           |                       |
+| ------------ | ----------------------------------------------------------- | --------------------- |
 
 
 ## Usage
