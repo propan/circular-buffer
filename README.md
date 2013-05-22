@@ -1,7 +1,7 @@
 # circular-buffer
 
 An implementation of persistent circular buffer. Implements most of Clojure collections interfaces (and therefore supports
-methods like conj, into, nth, etc) as well as Java collections interfaces.
+methods like *conj*, *into*, *nth*, etc) as well as Java collections interfaces.
 
 The implementation provides the following options:
 
